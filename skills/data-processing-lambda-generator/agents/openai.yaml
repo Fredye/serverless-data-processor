@@ -1,0 +1,4 @@
+interface:
+  display_name: "数据处理 Lambda 自动生成"
+  short_description: "根据IF定義書/IF変換説明書自动生成各IF的数据处理Lambda代码。"
+  default_prompt: "使用 $data-processing-lambda-generator，根据我提供的 IF定義書 和 IF変換説明書 为每个 IF 生成数据处理 Lambda。"
