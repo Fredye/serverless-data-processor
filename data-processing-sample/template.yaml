@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sample SQS data processor using the data-processing-framework Lambda layer.
+
+Parameters:
+  DataProcessingLayerArn:
+    Type: String
+    Description: Version ARN output by the data-processing-layer stack.
+
+Resources:
+  ProcessingDlq:
+    Type: AWS::SQS::Queue
+
+  ProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ProcessingDlq.Arn
+        maxReceiveCount: 3
+
+  ProcessedTransactions:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: event_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: event_id
+          KeyType: HASH
+
+  IdempotencyLedger:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: idempotency_key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: idempotency_key
+          KeyType: HASH
+
+  JobRuns:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+
+  TransactionProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 256
+      Layers:
+        - !Ref DataProcessingLayerArn
+      Environment:
+        Variables:
+          IDEMPOTENCY_TABLE: !Ref IdempotencyLedger
+          JOB_RUNS_TABLE: !Ref JobRuns
+          TRANSACTIONS_TABLE: !Ref ProcessedTransactions
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdempotencyLedger
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProcessedTransactions
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobRuns
+      Events:
+        QueueMessage:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ProcessingQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
+Outputs:
+  QueueUrl:
+    Value: !Ref ProcessingQueue
+  FunctionName:
+    Value: !Ref TransactionProcessorFunction

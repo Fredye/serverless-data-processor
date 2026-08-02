@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Reusable Lambda layer for event-driven data processing.
+
+Resources:
+  DataProcessingLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: data-processing-framework
+      Description: Event normalization, validation, idempotency and processing pipeline helpers
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: makefile
+
+Outputs:
+  LayerVersionArn:
+    Description: Publish this ARN to applications consuming the framework.
+    Value: !Ref DataProcessingLayer
+  LayerVersionArnExport:
+    Value: !Ref DataProcessingLayer
+    Export:
+      Name: !Sub '${AWS::StackName}-LayerVersionArn'
