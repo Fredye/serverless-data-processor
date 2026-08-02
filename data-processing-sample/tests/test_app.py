@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "data-processing-layer" / "la
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 os.environ.setdefault("TRANSACTIONS_TABLE", "unused")
 
-from app import TransactionProcessor
+from transaction_processor import TransactionProcessor
 from data_processing_framework import DataEvent, ProcessingContext
 
 
