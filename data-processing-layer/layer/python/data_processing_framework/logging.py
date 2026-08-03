@@ -5,7 +5,7 @@ import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
-from typing import Iterator
+from typing import Generator
 
 _context: ContextVar[dict[str, str]] = ContextVar("data_processing_log_context", default={})
 
@@ -45,7 +45,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 @contextmanager
-def log_context(**fields: str) -> Iterator[None]:
+def log_context(**fields: str) -> Generator[None, None, None]:
     token = _context.set({**_context.get(), **{key: str(value) for key, value in fields.items() if value is not None}})
     try:
         yield

@@ -2,7 +2,7 @@
 
 import os
 from contextlib import contextmanager
-from typing import Any, Callable, ClassVar, Iterator, Mapping, Sequence
+from typing import Any, Callable, ClassVar, Generator, Mapping, Sequence
 
 from .connection_pool import ConnectionPool
 
@@ -14,7 +14,7 @@ class DatabaseRepository:
         self._pool = pool
 
     @contextmanager
-    def transaction(self) -> Iterator[Any]:
+    def transaction(self) -> Generator[Any, None, None]:
         with self._pool.connection() as connection:
             try:
                 yield connection

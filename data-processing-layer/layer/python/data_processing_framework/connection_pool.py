@@ -9,7 +9,7 @@ psycopg factory; other drivers can plug in with their own factory.
 from contextlib import contextmanager
 from queue import Empty, LifoQueue
 from threading import Lock
-from typing import Callable, Iterator, Protocol, TypeVar
+from typing import Callable, Generator, Protocol, TypeVar
 
 
 class ClosableConnection(Protocol):
@@ -31,7 +31,7 @@ class ConnectionPool:
         self._lock = Lock()
 
     @contextmanager
-    def connection(self) -> Iterator[TConnection]:
+    def connection(self) -> Generator[TConnection, None, None]:
         connection = self._acquire()
         try:
             yield connection
