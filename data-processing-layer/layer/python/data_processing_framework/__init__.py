@@ -1,7 +1,7 @@
 """Reusable primitives for event-driven Lambda data processors."""
 
 from .connection_pool import ConnectionPool
-from .data_access import DatabaseRepository
+from .data_access import BaseRepository, DatabaseRepository
 from .idempotency import DynamoDbIdempotencyStore, IdempotencyStore
 from .job_management import DynamoDbJobRunManager, JobRunManager
 from .logging import bind_log_context, get_logger, log_context
@@ -21,6 +21,7 @@ __all__ = [
     "DynamoDbJobRunManager",
     "ConnectionPool",
     "DatabaseRepository",
+    "BaseRepository",
     "MessageParser",
     "ParsedMessage",
     "get_logger",

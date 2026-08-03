@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data-processing-sample"
+version = "0.1.0"
+description = "Sample SQS data processor using the data-processing-framework Lambda layer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Satisfied by the sibling data-processing-layer checkout; install it first
+    # with `pip install -e ../data-processing-layer` (the layer is not on PyPI).
+    "data-processing-framework",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["app", "transaction_processor", "transaction_repository"]

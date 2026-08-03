@@ -1,8 +1,9 @@
 """Small DB-API compatible pool that is safely reused by warm Lambda invocations.
 
-The Layer deliberately does not bundle a database driver. Applications supply a
-factory (for example a psycopg connection factory) and keep the pool at module
-scope so a warm Lambda environment can reuse connections.
+The pool itself is driver-agnostic: applications supply a connection factory
+and keep the pool at module scope so a warm Lambda environment can reuse
+connections. The Layer bundles psycopg and ``BaseRepository`` ships a default
+psycopg factory; other drivers can plug in with their own factory.
 """
 
 from contextlib import contextmanager

@@ -6,7 +6,7 @@ AWS 上基于 SAM 的无服务器数据处理框架与示例。以「SQS 触发 
 
 | 目录 | 说明 |
 |---|---|
-| `data-processing-layer` | 可复用 Lambda Layer（Python 3.12）：事件标准化、校验管线、幂等、作业台账、消息解析、JSON 日志、DB 连接池 |
+| `data-processing-layer` | 可复用 Lambda Layer（Python 3.12）：事件标准化、校验管线、幂等、作业台账、消息解析、JSON 日志、DB 连接池与 `BaseRepository` 仓储基类 |
 | `data-processing-sample` | SQS 数据处理示例（POS 交易行），新接口开发时以此为模板 |
 | `skills/data-processing-lambda-generator` | 根据 IF定義書 / IF変換説明書 自动生成数据处理 Lambda 的 Codex skill |
 | `docs` | 开发文档与整体方案设计 |
@@ -15,6 +15,13 @@ AWS 上基于 SAM 的无服务器数据处理框架与示例。以「SQS 触发 
 
 ### 本地测试
 
+先安装 Layer 与示例（均为可编辑模式；Sample 依赖 Layer，需先安装）：
+
+```bash
+pip install -e ./data-processing-layer
+pip install -e ./data-processing-sample
+```
+
 ```bash
 # Layer 测试
 PYTHONPATH=data-processing-layer/layer/python python3 -m unittest discover -s data-processing-layer/tests -v
@@ -22,6 +29,8 @@ PYTHONPATH=data-processing-layer/layer/python python3 -m unittest discover -s da
 # 示例 Lambda 测试
 PYTHONPATH=data-processing-layer/layer/python:data-processing-sample/src python3 -m unittest discover -s data-processing-sample/tests -v
 ```
+
+两个项目都安装后，上述命令可省略 `PYTHONPATH=` 前缀。
 
 ### 部署
 
@@ -41,7 +50,7 @@ sam deploy --guided --parameter-overrides DataProcessingLayerArn=<layer-version-
 
 - **标准事件信封**：消息统一为 `event_id` / `source_system` / `payload` 结构，业务载荷保留在 `payload`
 - **校验先行**：`validate()` 只校验、不产生副作用，`process()` 才执行转换与写入
-- **双重幂等**：框架幂等表（`idempotency_key`）＋ 业务 DynamoDB 条件写入（`attribute_not_exists(event_id)`）
+- **双重幂等**：框架幂等表（`idempotency_key`）＋ 业务写入自身幂等（示例使用 PostgreSQL `ON CONFLICT DO NOTHING`，也支持 DynamoDB 条件写入）
 - **失败重试**：`ReportBatchItemFailures` 只重试失败记录，重试三次后进入 DLQ
 - **作业台账**：每个任务登记 `RUNNING → SUCCEEDED / FAILED`，全程可追溯
 - **JSON 日志**：日志携带 `event_id` / `trace_id` / `job_id`，便于排查

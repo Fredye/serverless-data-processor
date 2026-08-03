@@ -1,16 +1,17 @@
-"""POS transaction line processor: validation and normalization."""
+"""POS transaction line processor: validation, normalization and persistence."""
 
-import os
 from decimal import Decimal, InvalidOperation
 
 from data_processing_framework import DataEvent, ProcessingContext
+
+from transaction_repository import PostgresTransactionRepository, get_repository
 
 
 class TransactionProcessor:
     name = "transaction-normalization"
 
-    def __init__(self, table=None):
-        self._table = table or _transactions_table()
+    def __init__(self, repository: PostgresTransactionRepository | None = None):
+        self._repository = repository if repository is not None else get_repository()
 
     def validate(self, event: DataEvent) -> None:
         payload = event.payload
@@ -41,17 +42,10 @@ class TransactionProcessor:
             "source_system": event.source_system,
             "trace_id": context.trace_id,
         }
-        # This condition makes the business write itself idempotent as well.
-        try:
-            self._table.put_item(Item=item, ConditionExpression="attribute_not_exists(event_id)")
-        except self._table.meta.client.exceptions.ConditionalCheckFailedException:
-            pass
-        return {"event_id": event.event_id, "gross_amount": str(item["gross_amount"])}
-
-
-def _transactions_table():
-    # boto3 is bundled by the Lambda Python runtime. Keeping this import lazy
-    # lets validation-focused unit tests run without AWS SDK installation.
-    import boto3
-
-    return boto3.resource("dynamodb").Table(os.environ["TRANSACTIONS_TABLE"])
+        # ON CONFLICT DO NOTHING makes the business write itself idempotent as well.
+        inserted = self._repository.insert(item)
+        return {
+            "event_id": event.event_id,
+            "gross_amount": str(item["gross_amount"]),
+            "inserted": inserted,
+        }

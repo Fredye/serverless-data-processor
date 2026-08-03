@@ -1,11 +1,39 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Sample SQS data processor using the data-processing-framework Lambda layer.
+Description: Sample SQS data processor using the data-processing-framework Lambda layer with PostgreSQL persistence.
 
 Parameters:
   DataProcessingLayerArn:
     Type: String
     Description: Version ARN output by the data-processing-layer stack.
+  DatabaseHost:
+    Type: String
+    Description: RDS/Aurora PostgreSQL endpoint hostname.
+  DatabasePort:
+    Type: Number
+    Default: 5432
+    Description: RDS/Aurora PostgreSQL endpoint port.
+  DatabaseName:
+    Type: String
+    Description: Database that contains the processed_transactions table.
+  DatabaseUser:
+    Type: String
+    Description: Database user used by the Lambda function.
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Description: Password for DatabaseUser. Prefer AWS Secrets Manager in production.
+  VpcSubnetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Subnets for Lambda VPC access to RDS. Leave empty when the database is publicly reachable.
+  VpcSecurityGroupIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Security groups granting the function outbound access to RDS.
+
+Conditions:
+  UseVpc: !Not [!Equals [!Join ['', !Ref VpcSubnetIds], '']]
 
 Resources:
   ProcessingDlq:
@@ -18,17 +46,6 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt ProcessingDlq.Arn
         maxReceiveCount: 3
-
-  ProcessedTransactions:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: event_id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: event_id
-          KeyType: HASH
 
   IdempotencyLedger:
     Type: AWS::DynamoDB::Table
@@ -62,16 +79,24 @@ Resources:
       MemorySize: 256
       Layers:
         - !Ref DataProcessingLayerArn
+      VpcConfig:
+        Fn::If:
+          - UseVpc
+          - SubnetIds: !Ref VpcSubnetIds
+            SecurityGroupIds: !Ref VpcSecurityGroupIds
+          - !Ref AWS::NoValue
       Environment:
         Variables:
           IDEMPOTENCY_TABLE: !Ref IdempotencyLedger
           JOB_RUNS_TABLE: !Ref JobRuns
-          TRANSACTIONS_TABLE: !Ref ProcessedTransactions
+          DB_HOST: !Ref DatabaseHost
+          DB_PORT: !Ref DatabasePort
+          DB_NAME: !Ref DatabaseName
+          DB_USER: !Ref DatabaseUser
+          DB_PASSWORD: !Ref DatabasePassword
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref IdempotencyLedger
-        - DynamoDBCrudPolicy:
-            TableName: !Ref ProcessedTransactions
         - DynamoDBCrudPolicy:
             TableName: !Ref JobRuns
       Events:

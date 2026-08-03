@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data-processing-framework"
+version = "0.1.0"
+description = "Reusable Lambda layer primitives for event-driven data processing"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+package-dir = {"" = "layer/python"}
+packages = ["data_processing_framework"]
+
+[tool.setuptools.dynamic]
+# Keep layer/requirements.txt as the single source of truth for runtime deps:
+# the SAM Layer build and the editable install both read from it.
+dependencies = {file = ["layer/requirements.txt"]}
